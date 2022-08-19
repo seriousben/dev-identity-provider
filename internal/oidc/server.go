@@ -1,4 +1,4 @@
-package oidcserver
+package oidc
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"golang.org/x/text/language"
 
-	"github.com/seriousben/dev-identity-provider/oidcserver/internal"
+	"github.com/seriousben/dev-identity-provider/internal/storage"
 	"github.com/zitadel/oidc/pkg/op"
 )
 
@@ -18,15 +18,20 @@ const (
 )
 
 func init() {
-	internal.RegisterClients(
-		internal.NativeClient("native"),
-		internal.WebClient("web", "secret"),
-		internal.WebClient("api", "secret"),
-		internal.WebClient("kbyuFDidLLm280LIwVFiazOqjO3ty8KH", "60Op4HFM0I8ajz0WdiStAbziZ-VFQttXuxixHHs2R7r7-CW8GR79l-mmLqMhc-Sa", "https://openidconnect.net/callback"),
+	storage.RegisterClients(
+		storage.NativeClient("native"),
+		storage.WebClient("web", "secret"),
+		storage.WebClient("api", "secret"),
+		storage.WebClient("kbyuFDidLLm280LIwVFiazOqjO3ty8KH", "60Op4HFM0I8ajz0WdiStAbziZ-VFQttXuxixHHs2R7r7-CW8GR79l-mmLqMhc-Sa", "https://openidconnect.net/callback"),
 	)
 }
 
-func New(remoteAddr string) http.Handler {
+type Storage interface {
+	op.Storage
+	authenticate
+}
+
+func New(remoteAddr string, storage Storage) http.Handler {
 	ctx := context.Background()
 
 	//this will allow us to use an issuer with http:// instead of https://
@@ -45,11 +50,6 @@ func New(remoteAddr string) http.Handler {
 			log.Printf("error serving logged out page: %v", err)
 		}
 	})
-
-	//the OpenIDProvider interface needs a Storage interface handling various checks and state manipulations
-	//this might be the layer for accessing your database
-	//in this example it will be handled in-memory
-	storage := internal.NewStorage()
 
 	//creation of the OpenIDProvider with the just created in-memory Storage
 	provider, err := newOP(ctx, storage, remoteAddr, key)

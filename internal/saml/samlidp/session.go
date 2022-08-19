@@ -9,8 +9,7 @@ import (
 	"text/template"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
+	"github.com/seriousben/dev-identity-provider/internal/storage"
 	"github.com/zenazn/goji/web"
 
 	"github.com/crewjam/saml"
@@ -36,30 +35,31 @@ var sessionMaxAge = time.Hour
 func (s *Server) GetSession(w http.ResponseWriter, r *http.Request, req *saml.IdpAuthnRequest) *saml.Session {
 	// if we received login credentials then maybe we can create a session
 	if r.Method == "POST" && r.PostForm.Get("user") != "" {
-		user := User{}
+		user := storage.User{}
 		if err := s.Store.Get(fmt.Sprintf("/users/%s", r.PostForm.Get("user")), &user); err != nil {
 			s.sendLoginForm(w, r, req, "Invalid username or password")
 			return nil
 		}
 
-		if err := bcrypt.CompareHashAndPassword(user.HashedPassword, []byte(r.PostForm.Get("password"))); err != nil {
+		// No password encryption in our dev identity provider.
+		if user.Password != r.PostForm.Get("password") {
 			s.sendLoginForm(w, r, req, "Invalid username or password")
 			return nil
 		}
 
 		session := &saml.Session{
-			ID:                    base64.StdEncoding.EncodeToString(randomBytes(32)),
-			NameID:                user.Email,
-			CreateTime:            saml.TimeNow(),
-			ExpireTime:            saml.TimeNow().Add(sessionMaxAge),
-			Index:                 hex.EncodeToString(randomBytes(32)),
-			UserName:              user.Name,
-			Groups:                user.Groups[:],
-			UserEmail:             user.Email,
-			UserCommonName:        user.CommonName,
-			UserSurname:           user.Surname,
-			UserGivenName:         user.GivenName,
-			UserScopedAffiliation: user.ScopedAffiliation,
+			ID:             base64.StdEncoding.EncodeToString(randomBytes(32)),
+			NameID:         user.Email,
+			CreateTime:     saml.TimeNow(),
+			ExpireTime:     saml.TimeNow().Add(sessionMaxAge),
+			Index:          hex.EncodeToString(randomBytes(32)),
+			UserName:       user.Username,
+			Groups:         user.Groups[:],
+			UserEmail:      user.Email,
+			UserCommonName: user.Firstname + " " + user.Lastname,
+			UserSurname:    user.Lastname,
+			UserGivenName:  user.Firstname,
+			// UserScopedAffiliation: user.ScopedAffiliation,
 		}
 		if err := s.Store.Put(fmt.Sprintf("/sessions/%s", session.ID), &session); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

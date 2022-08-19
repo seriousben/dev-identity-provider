@@ -5,23 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/seriousben/dev-identity-provider/internal/storage"
 	"github.com/zenazn/goji/web"
-	"golang.org/x/crypto/bcrypt"
 )
-
-// User represents a stored user. The data here are used to
-// populate user once the user has authenticated.
-type User struct {
-	Name              string   `json:"name"`
-	PlaintextPassword *string  `json:"password,omitempty"` // not stored
-	HashedPassword    []byte   `json:"hashed_password,omitempty"`
-	Groups            []string `json:"groups,omitempty"`
-	Email             string   `json:"email,omitempty"`
-	CommonName        string   `json:"common_name,omitempty"`
-	Surname           string   `json:"surname,omitempty"`
-	GivenName         string   `json:"given_name,omitempty"`
-	ScopedAffiliation string   `json:"scoped_affiliation,omitempty"`
-}
 
 // HandleListUsers handles the `GET /users/` request and responds with a JSON formatted list
 // of user names.
@@ -41,14 +27,13 @@ func (s *Server) HandleListUsers(c web.C, w http.ResponseWriter, r *http.Request
 // HandleGetUser handles the `GET /users/:id` request and responds with the user object in JSON
 // format. The HashedPassword field is excluded.
 func (s *Server) HandleGetUser(c web.C, w http.ResponseWriter, r *http.Request) {
-	user := User{}
+	user := storage.User{}
 	err := s.Store.Get(fmt.Sprintf("/users/%s", c.URLParams["id"]), &user)
 	if err != nil {
 		s.logger.Printf("ERROR: %s", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	user.HashedPassword = nil
 	json.NewEncoder(w).Encode(user)
 }
 
@@ -57,37 +42,13 @@ func (s *Server) HandleGetUser(c web.C, w http.ResponseWriter, r *http.Request) 
 // and stored in HashedPassword. If the PlaintextPassword field is not present then
 // HashedPassword retains it's stored value.
 func (s *Server) HandlePutUser(c web.C, w http.ResponseWriter, r *http.Request) {
-	user := User{}
+	user := storage.User{}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		s.logger.Printf("ERROR: %s", err)
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	user.Name = c.URLParams["id"]
-
-	if user.PlaintextPassword != nil {
-		var err error
-		user.HashedPassword, err = bcrypt.GenerateFromPassword([]byte(*user.PlaintextPassword), bcrypt.DefaultCost)
-		if err != nil {
-			s.logger.Printf("ERROR: %s", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-	} else {
-		existingUser := User{}
-		err := s.Store.Get(fmt.Sprintf("/users/%s", c.URLParams["id"]), &existingUser)
-		switch {
-		case err == nil:
-			user.HashedPassword = existingUser.HashedPassword
-		case err == ErrNotFound:
-			// nop
-		default:
-			s.logger.Printf("ERROR: %s", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-	}
-	user.PlaintextPassword = nil
+	user.ID = c.URLParams["id"]
 
 	err := s.Store.Put(fmt.Sprintf("/users/%s", c.URLParams["id"]), &user)
 	if err != nil {

@@ -5,34 +5,24 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
-	"os"
 
+	"github.com/seriousben/dev-identity-provider/internal/storage"
 	"github.com/zenazn/goji/web"
 
 	"github.com/crewjam/saml"
 )
-
-// Service represents a configured SP for whom this IDP provides authentication services.
-type Service struct {
-	// Name is the name of the service provider
-	Name string
-
-	// Metdata is the XML metadata of the service provider.
-	Metadata saml.EntityDescriptor
-}
 
 // GetServiceProvider returns the Service Provider metadata for the
 // service provider ID, which is typically the service provider's
 // metadata URL. If an appropriate service provider cannot be found then
 // the returned error must be os.ErrNotExist.
 func (s *Server) GetServiceProvider(r *http.Request, serviceProviderID string) (*saml.EntityDescriptor, error) {
-	s.idpConfigMu.RLock()
-	defer s.idpConfigMu.RUnlock()
-	rv, ok := s.ServiceProviders[serviceProviderID]
-	if !ok {
-		return nil, os.ErrNotExist
+	service := storage.ServiceProvider{}
+	err := s.Store.Get(fmt.Sprintf("/services-by-entity-id/%s", serviceProviderID), &service)
+	if err != nil {
+		return nil, err
 	}
-	return rv, nil
+	return service.Metadata, nil
 }
 
 // HandleListServices handles the `GET /services/` request and responds with a JSON formatted list
@@ -53,7 +43,7 @@ func (s *Server) HandleListServices(c web.C, w http.ResponseWriter, r *http.Requ
 // HandleGetService handles the `GET /services/:id` request and responds with the service
 // metadata in XML format.
 func (s *Server) HandleGetService(c web.C, w http.ResponseWriter, r *http.Request) {
-	service := Service{}
+	service := storage.ServiceProvider{}
 	err := s.Store.Get(fmt.Sprintf("/services/%s", c.URLParams["id"]), &service)
 	if err != nil {
 		s.logger.Printf("ERROR: %s", err)
@@ -66,7 +56,7 @@ func (s *Server) HandleGetService(c web.C, w http.ResponseWriter, r *http.Reques
 // HandlePutService handles the `PUT /shortcuts/:id` request. It accepts the XML-formatted
 // service metadata in the request body and stores it.
 func (s *Server) HandlePutService(c web.C, w http.ResponseWriter, r *http.Request) {
-	service := Service{}
+	service := storage.ServiceProvider{}
 
 	metadata, err := GetSPMetadata(r.Body)
 	if err != nil {
@@ -75,7 +65,7 @@ func (s *Server) HandlePutService(c web.C, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	service.Metadata = *metadata
+	service.Metadata = metadata
 
 	err = s.Store.Put(fmt.Sprintf("/services/%s", c.URLParams["id"]), &service)
 	if err != nil {
@@ -84,16 +74,12 @@ func (s *Server) HandlePutService(c web.C, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	s.idpConfigMu.Lock()
-	s.ServiceProviders[service.Metadata.EntityID] = &service.Metadata
-	s.idpConfigMu.Unlock()
-
 	w.WriteHeader(http.StatusNoContent)
 }
 
 // HandleDeleteService handles the `DELETE /services/:id` request.
 func (s *Server) HandleDeleteService(c web.C, w http.ResponseWriter, r *http.Request) {
-	service := Service{}
+	service := storage.ServiceProvider{}
 	err := s.Store.Get(fmt.Sprintf("/services/%s", c.URLParams["id"]), &service)
 	if err != nil {
 		s.logger.Printf("ERROR: %s", err)
@@ -107,29 +93,5 @@ func (s *Server) HandleDeleteService(c web.C, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	s.idpConfigMu.Lock()
-	delete(s.ServiceProviders, service.Metadata.EntityID)
-	s.idpConfigMu.Unlock()
-
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// initializeServices reads all the stored services and initializes the underlying
-// identity provider to accept them.
-func (s *Server) initializeServices() error {
-	serviceNames, err := s.Store.List("/services/")
-	if err != nil {
-		return err
-	}
-	for _, serviceName := range serviceNames {
-		service := Service{}
-		if err := s.Store.Get(fmt.Sprintf("/services/%s", serviceName), &service); err != nil {
-			return err
-		}
-
-		s.idpConfigMu.Lock()
-		s.ServiceProviders[service.Metadata.EntityID] = &service.Metadata
-		s.idpConfigMu.Unlock()
-	}
-	return nil
 }

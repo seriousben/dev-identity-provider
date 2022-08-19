@@ -1,4 +1,4 @@
-package oidcserver
+package oidc
 
 import (
 	"fmt"
