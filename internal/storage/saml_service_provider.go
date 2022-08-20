@@ -30,13 +30,6 @@ func (sp *ServiceProvider) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a)
 }
 
-func mustMetadata(s *saml.EntityDescriptor, err error) *saml.EntityDescriptor {
-	if err != nil {
-		panic(err)
-	}
-	return s
-}
-
 func NewMetadata(data []byte) (*saml.EntityDescriptor, error) {
 	spMetadata := &saml.EntityDescriptor{}
 	if err := xrv.Validate(bytes.NewBuffer(data)); err != nil {
