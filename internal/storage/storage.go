@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	_ "embed"
 	"fmt"
 	"math/big"
 	"os"
@@ -18,6 +19,9 @@ import (
 )
 
 var (
+	//go:embed samltestid_sp_metadata.xml
+	samlidpMetadata []byte
+
 	//serviceKey1 is a public key which will be used for the JWT Profile Authorization Grant
 	//the corresponding private key is in the service-key1.json (for demonstration purposes)
 	serviceKey1 = &rsa.PublicKey{
@@ -54,7 +58,7 @@ type signingKey struct {
 
 func NewStorage() *Storage {
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
-	return &Storage{
+	s := &Storage{
 		authRequests:  make(map[string]*AuthRequest),
 		codes:         make(map[string]string),
 		tokens:        make(map[string]*Token),
@@ -79,7 +83,13 @@ func NewStorage() *Storage {
 				},
 			},
 		},
-		serviceProviders:           map[string]*ServiceProvider{},
+		serviceProviders: map[string]*ServiceProvider{
+			"samltest.id": {
+				ID:       "samltest.id",
+				Metadata: mustMetadata(newMetadata(samlidpMetadata)),
+			},
+		},
+		// Initialized from the serviceProviders.
 		serviceProvidersByEntityID: map[string]*ServiceProvider{},
 		signingKey: signingKey{
 			ID:        "id",
@@ -87,6 +97,12 @@ func NewStorage() *Storage {
 			Key:       key,
 		},
 	}
+
+	for k, sp := range s.serviceProviders {
+		s.serviceProvidersByEntityID[sp.Metadata.EntityID] = s.serviceProviders[k]
+	}
+
+	return s
 }
 
 func (s *Storage) ListUsers() ([]*User, error) {
