@@ -100,7 +100,7 @@ func (s *Server) HandleIDPInitiated(c web.C, w http.ResponseWriter, r *http.Requ
 	case shortcut.RelayState != nil:
 		relayState = *shortcut.RelayState
 	case shortcut.URISuffixAsRelayState:
-		relayState, _ = c.URLParams["*"]
+		relayState = c.URLParams["*"]
 	}
 
 	s.idpConfigMu.RLock()

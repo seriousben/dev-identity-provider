@@ -1,0 +1,30 @@
+name: "CI"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  checks:
+    name: "Checks"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: WillAbides/setup-go-faster@v1.7.0
+      with:
+        go-version: "*"
+    - run: "go test -coverprofile=coverage.out -covermode=count ./..."
+    - run: "go vet ./..."
+    - uses: dominikh/staticcheck-action@v1.1.0
+      with:
+        install-go: false
+    - name: Patch Coverage
+      uses: seriousben/go-patch-cover-action@v1
+      with:
+        version: main
