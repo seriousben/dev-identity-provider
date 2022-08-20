@@ -64,17 +64,19 @@ func NewStorage() *Storage {
 		tokens:        make(map[string]*Token),
 		refreshTokens: make(map[string]*RefreshToken),
 		clients:       clients,
-		users: map[string]*User{
-			"id1": {
-				ID:            "id1",
-				Username:      "user1",
-				Password:      "passworduser1",
-				Firstname:     "Test",
-				Lastname:      "User",
-				Email:         "test-user@example.com",
-				EmailVerified: true,
-				//PreferredLanguage: language.English,
-			},
+		users:         map[string]*User{
+			/*
+				"id1": {
+					ID:            "id1",
+					Username:      "user1",
+					Password:      "passworduser1",
+					Firstname:     "Test",
+					Lastname:      "User",
+					Email:         "test-user@example.com",
+					EmailVerified: true,
+					//PreferredLanguage: language.English,
+				},
+			*/
 		},
 		services: map[string]Service{
 			"service": {
@@ -84,10 +86,12 @@ func NewStorage() *Storage {
 			},
 		},
 		serviceProviders: map[string]*ServiceProvider{
-			"samltest.id": {
-				ID:       "samltest.id",
-				Metadata: mustMetadata(newMetadata(samlidpMetadata)),
-			},
+			/*
+				"samltest.id": {
+					ID:       "samltest.id",
+					Metadata: mustMetadata(NewMetadata(samlidpMetadata)),
+				},
+			*/
 		},
 		// Initialized from the serviceProviders.
 		serviceProvidersByEntityID: map[string]*ServiceProvider{},

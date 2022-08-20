@@ -37,7 +37,7 @@ func mustMetadata(s *saml.EntityDescriptor, err error) *saml.EntityDescriptor {
 	return s
 }
 
-func newMetadata(data []byte) (*saml.EntityDescriptor, error) {
+func NewMetadata(data []byte) (*saml.EntityDescriptor, error) {
 	spMetadata := &saml.EntityDescriptor{}
 	if err := xrv.Validate(bytes.NewBuffer(data)); err != nil {
 		return nil, err
