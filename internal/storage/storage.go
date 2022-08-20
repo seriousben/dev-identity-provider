@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
-	_ "embed"
 	"fmt"
 	"math/big"
 	"os"
@@ -19,9 +18,6 @@ import (
 )
 
 var (
-	//go:embed samltestid_sp_metadata.xml
-	samlidpMetadata []byte
-
 	//serviceKey1 is a public key which will be used for the JWT Profile Authorization Grant
 	//the corresponding private key is in the service-key1.json (for demonstration purposes)
 	serviceKey1 = &rsa.PublicKey{
@@ -64,18 +60,7 @@ func NewStorage() *Storage {
 		tokens:        make(map[string]*Token),
 		refreshTokens: make(map[string]*RefreshToken),
 		clients:       clients,
-		users: map[string]*User{
-			"id1": {
-				ID:            "id1",
-				Username:      "user1",
-				Password:      "passworduser1",
-				Firstname:     "Test",
-				Lastname:      "User",
-				Email:         "test-user@example.com",
-				EmailVerified: true,
-				//PreferredLanguage: language.English,
-			},
-		},
+		users:         map[string]*User{},
 		services: map[string]Service{
 			"service": {
 				keys: map[string]*rsa.PublicKey{
@@ -83,12 +68,7 @@ func NewStorage() *Storage {
 				},
 			},
 		},
-		serviceProviders: map[string]*ServiceProvider{
-			"samltest.id": {
-				ID:       "samltest.id",
-				Metadata: mustMetadata(newMetadata(samlidpMetadata)),
-			},
-		},
+		serviceProviders: map[string]*ServiceProvider{},
 		// Initialized from the serviceProviders.
 		serviceProvidersByEntityID: map[string]*ServiceProvider{},
 		signingKey: signingKey{
