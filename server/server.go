@@ -1,12 +1,15 @@
 package server
 
 import (
+	_ "embed"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -14,6 +17,22 @@ import (
 	"github.com/seriousben/dev-identity-provider/internal/oidc"
 	"github.com/seriousben/dev-identity-provider/internal/saml"
 	"github.com/seriousben/dev-identity-provider/internal/storage"
+)
+
+var (
+	//go:embed index.html
+	indexHTML string
+	indextmpl = template.Must(template.New("index").Funcs(template.FuncMap{
+		"ToJSON": func(v interface{}) string {
+			build := &strings.Builder{}
+			enc := json.NewEncoder(build)
+			enc.SetIndent("", " ")
+			if err := enc.Encode(v); err != nil {
+				return err.Error()
+			}
+			return build.String()
+		},
+	}).Parse(indexHTML))
 )
 
 func loggingMiddleware(next http.Handler) http.Handler {
@@ -84,31 +103,32 @@ func syncStorage(basePath string, s *storage.Storage) error {
 }
 
 func New(serverRemoteAddr string) http.Handler {
-	storage := storage.NewStorage()
+	stor := storage.NewStorage()
 
-	if err := syncStorage("https://raw.githubusercontent.com/seriousben/dev-identity-provider-config/main/", storage); err != nil {
+	if err := syncStorage("https://raw.githubusercontent.com/seriousben/dev-identity-provider-config/main/", stor); err != nil {
 		panic(err)
 	}
 	go func() {
 		for {
 			// Reset/Sync config daily
 			time.Sleep(24 * time.Hour)
-			if err := syncStorage("https://raw.githubusercontent.com/seriousben/dev-identity-provider-config/main/", storage); err != nil {
+			if err := syncStorage("https://raw.githubusercontent.com/seriousben/dev-identity-provider-config/main/", stor); err != nil {
 				fmt.Println("error syncing", err)
 			}
 		}
 	}()
 
-	oidcHandler := oidc.New(fmt.Sprintf("%s/oidc", serverRemoteAddr), storage)
-	samlHandler := saml.New(fmt.Sprintf("%s/saml2", serverRemoteAddr), storage)
+	oidcHandler := oidc.New(fmt.Sprintf("%s/oidc", serverRemoteAddr), stor)
+	samlHandler := saml.New(fmt.Sprintf("%s/saml2", serverRemoteAddr), stor)
 	r := mux.NewRouter()
 	r.Use(loggingMiddleware)
+
 	r.PathPrefix("/oidc").Handler(http.StripPrefix("/oidc", oidcHandler))
 	r.PathPrefix("/saml2").Handler(http.StripPrefix("/saml2", samlHandler))
 	r.Methods("sdf").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 	r.Path("/refresh-config").Methods("POST").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("content-type", "application/json")
-		if err := syncStorage("https://raw.githubusercontent.com/seriousben/dev-identity-provider-config/main/", storage); err != nil {
+		if err := syncStorage("https://raw.githubusercontent.com/seriousben/dev-identity-provider-config/main/", stor); err != nil {
 			log.Println("error", err)
 			fmt.Fprintf(w, `{"error": %q}`, err.Error())
 			return
@@ -116,19 +136,27 @@ func New(serverRemoteAddr string) http.Handler {
 		w.Write([]byte(`{"success": "true"}`))
 	})
 	r.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
-		users, err := storage.ListUsers()
+		users, err := stor.ListUsers()
 		if err != nil {
 			w.Write([]byte(err.Error()))
 			return
 		}
-		sps, err := storage.ListServiceProviders()
+		sps, err := stor.ListServiceProviders()
 		if err != nil {
 			w.Write([]byte(err.Error()))
 			return
+		}
+		spds := make([]storage.ServiceProviderDetailed, len(sps))
+		for i, sp := range sps {
+			spds[i] = storage.ServiceProviderDetailed{
+				ID:          sp.ID,
+				EntityID:    sp.Metadata.EntityID,
+				MetadataURL: fmt.Sprintf("%s/config/saml_service_providers/%s", serverRemoteAddr, sp.ID),
+			}
 		}
 		v := map[string]interface{}{
 			"users":             users,
-			"service_providers": sps,
+			"service_providers": spds,
 		}
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
@@ -140,7 +168,7 @@ func New(serverRemoteAddr string) http.Handler {
 	})
 	r.HandleFunc("/config/saml_service_providers/{serviceID}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
-		sp, err := storage.GetServiceProviderByID(vars["serviceID"])
+		sp, err := stor.GetServiceProviderByID(vars["serviceID"])
 		if err != nil {
 			w.Write([]byte(err.Error()))
 			return
@@ -153,6 +181,50 @@ func New(serverRemoteAddr string) http.Handler {
 			log.Println("error encoding", err)
 		}
 	})
+	r.Path("/").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		users, err := stor.ListUsers()
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+		sps, err := stor.ListServiceProviders()
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+		spds := make([]storage.ServiceProviderDetailed, len(sps))
+		for i, sp := range sps {
+			spds[i] = storage.ServiceProviderDetailed{
+				ID:          sp.ID,
+				EntityID:    sp.Metadata.EntityID,
+				MetadataURL: fmt.Sprintf("%s/config/saml_service_providers/%s", serverRemoteAddr, sp.ID),
+			}
+		}
+
+		version := "dev"
+		if info, ok := debug.ReadBuildInfo(); ok {
+			var vcsTime, vcsRev string
+			for _, s := range info.Settings {
+				if s.Key == "vcs.time" {
+					vcsTime = s.Value
+				}
+				if s.Key == "vcs.revision" {
+					vcsRev = s.Value
+				}
+				if vcsRev != "" && vcsTime != "" {
+					version = fmt.Sprintf("Time=%s / Revision=%s", vcsTime, vcsRev)
+				}
+			}
+		}
+
+		v := map[string]interface{}{
+			"Users":            users,
+			"ServiceProviders": spds,
+			"Version":          version,
+		}
+		indextmpl.Execute(w, v)
+		// http.Redirect(w, r, "https://github.com/seriousben/dev-identity-provider", http.StatusFound)
+	}))
 
 	return r
 }

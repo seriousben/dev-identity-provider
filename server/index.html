@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>dev-identity-provider</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <div align="center">
+        <h1>dev-idp.seriousben.com</h1>
+        <p>Your hosted <a href="https://github.com/seriousben/dev-identity-provider">development identity provider</a></p>
+        <p>
+            <img src="https://img.shields.io/badge/SAML2-Supported-green"/>
+            <img src="https://img.shields.io/badge/OIDC-Supported-green"/>
+            <img src="https://img.shields.io/badge/-Development Only-red"/>
+        </p>
+    </div>
+    <h2>Features</h2>
+    <ul>
+        <li>OpenID Connect (OIDC) Support: <a href="https://dev-idp.seriousben.com/oidc/.well-known/openid-configuration">OpenID Configuration</a></li>
+        <li>SAML2 Support: <a href="https://dev-idp.seriousben.com/saml2/metadata">SAML2 Identity Provider Metadata</a></li>
+        <li><a href="https://github.com/seriousben/dev-identity-provider-config">Dynamic Configuration</a></li>
+        <li>Run it locally or host it: <a href="https://github.com/seriousben/dev-identity-provider">seriousben/dev-identity-provider</a></li>
+    </ul>
+
+    <h2>Identity Provider Information</h2>
+    <h3>Users</h3>
+    <ul>
+        {{range .Users}}
+            <li><pre>{{. | ToJSON}}</pre></li>
+        {{end}}
+    </ul>
+
+    <h3>SAML Service Providers</h3>
+    <ul>
+        {{range .ServiceProviders}}
+            <li><pre>{{. | ToJSON}}</pre></li>
+        {{end}}
+    </ul>
+
+    <h3>Runtime Info</h3>
+    <ul>
+        <li><strong>Version:</strong> {{.Version}}</li>
+    </ul>
+</body>
+
+</html>

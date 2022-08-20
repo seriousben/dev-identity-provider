@@ -2,10 +2,8 @@ package storage
 
 import (
 	"bytes"
-	"encoding/json"
 	"encoding/xml"
 	"errors"
-	"fmt"
 
 	xrv "github.com/mattermost/xml-roundtrip-validator"
 
@@ -17,17 +15,10 @@ type ServiceProvider struct {
 	Metadata *saml.EntityDescriptor `json:"-"`
 }
 
-func (sp *ServiceProvider) MarshalJSON() ([]byte, error) {
-	a := struct {
-		ID          string `json:"id,omitempty"`
-		EntityID    string `json:"entityId,omitempty"`
-		MetadataURL string `json:"metadataUrl,omitempty"`
-	}{
-		ID:          sp.ID,
-		EntityID:    sp.Metadata.EntityID,
-		MetadataURL: fmt.Sprintf("/config/saml_service_providers/%s", sp.ID),
-	}
-	return json.Marshal(a)
+type ServiceProviderDetailed struct {
+	ID          string `json:"id,omitempty"`
+	EntityID    string `json:"entityId,omitempty"`
+	MetadataURL string `json:"metadataUrl,omitempty"`
 }
 
 func NewMetadata(data []byte) (*saml.EntityDescriptor, error) {
