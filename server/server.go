@@ -223,7 +223,6 @@ func New(serverRemoteAddr string) http.Handler {
 			"Version":          version,
 		}
 		indextmpl.Execute(w, v)
-		// http.Redirect(w, r, "https://github.com/seriousben/dev-identity-provider", http.StatusFound)
 	}))
 
 	return r
