@@ -34,6 +34,13 @@
         {{end}}
     </ul>
 
+    <h3>OIDC Clients</h3>
+    <ul>
+        {{range .Clients}}
+            <li><pre>{{. | ToJSON}}</pre></li>
+        {{end}}
+    </ul>
+
     <h3>SAML Service Providers</h3>
     <ul>
         {{range .ServiceProviders}}
