@@ -59,7 +59,7 @@ func NewStorage() *Storage {
 		codes:         make(map[string]string),
 		tokens:        make(map[string]*Token),
 		refreshTokens: make(map[string]*RefreshToken),
-		clients:       clients,
+		clients:       make(map[string]*Client),
 		users:         map[string]*User{},
 		services: map[string]Service{
 			"service": {
@@ -83,6 +83,26 @@ func NewStorage() *Storage {
 	}
 
 	return s
+}
+
+func (s *Storage) ListClients() ([]*Client, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	keys := make([]*Client, len(s.clients))
+	i := 0
+	for _, v := range s.clients {
+		keys[i] = v
+		i++
+	}
+	return keys, nil
+}
+func (s *Storage) RegisterClient(id string, u *Client) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	s.clients[id] = u
+	return nil
 }
 
 func (s *Storage) ListUsers() ([]*User, error) {
@@ -465,7 +485,7 @@ func (s *Storage) AuthorizeClientIDSecret(ctx context.Context, clientID, clientS
 	}
 	//for this example we directly check the secret
 	//obviously you would not have the secret in plain text, but rather hashed and salted (e.g. using bcrypt)
-	if client.secret != clientSecret {
+	if client.Secret != clientSecret {
 		return fmt.Errorf("invalid secret")
 	}
 	return nil

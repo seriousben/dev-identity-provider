@@ -9,7 +9,6 @@ import (
 	"github.com/gorilla/mux"
 	"golang.org/x/text/language"
 
-	"github.com/seriousben/dev-identity-provider/internal/storage"
 	"github.com/zitadel/oidc/pkg/op"
 )
 
@@ -17,14 +16,7 @@ const (
 	pathLoggedOut = "/logged-out"
 )
 
-func init() {
-	storage.RegisterClients(
-		storage.NativeClient("native"),
-		storage.WebClient("web", "secret"),
-		storage.WebClient("api", "secret"),
-		storage.WebClient("kbyuFDidLLm280LIwVFiazOqjO3ty8KH", "60Op4HFM0I8ajz0WdiStAbziZ-VFQttXuxixHHs2R7r7-CW8GR79l-mmLqMhc-Sa", "https://openidconnect.net/callback"),
-	)
-}
+//		storage.WebClient("kbyuFDidLLm280LIwVFiazOqjO3ty8KH", "60Op4HFM0I8ajz0WdiStAbziZ-VFQttXuxixHHs2R7r7-CW8GR79l-mmLqMhc-Sa", "https://openidconnect.net/callback"),
 
 type Storage interface {
 	op.Storage

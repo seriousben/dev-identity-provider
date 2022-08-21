@@ -49,10 +49,15 @@ func syncStorage(basePath string, s *storage.Storage) error {
 
 	var config struct {
 		ServiceProviders []struct {
-			ID          string `json:"id"`
-			MetadataURL string `json:"metadataUrl"`
+			ID          string `json:"id,omitempty"`
+			MetadataURL string `json:"metadataUrl,omitempty"`
 		} `json:"service_providers"`
-		Users []*storage.User `json:"users"`
+		Users   []*storage.User `json:"users"`
+		Clients []struct {
+			ClientID     string   `json:"clientId,omitempty"`
+			ClientSecret string   `json:"clientSecret,omitempty"`
+			RedirectURIs []string `json:"redirectUris,omitempty"`
+		} `json:"clients"`
 	}
 
 	resp, err := http.Get(fmt.Sprintf("%s/config.json", basePath))
@@ -95,6 +100,13 @@ func syncStorage(basePath string, s *storage.Storage) error {
 
 	for i, u := range config.Users {
 		if err := s.PutUser(u.ID, config.Users[i]); err != nil {
+			return err
+		}
+	}
+
+	for _, u := range config.Clients {
+		cl := storage.WebClient(u.ClientID, u.ClientSecret, u.RedirectURIs...)
+		if err := s.RegisterClient(cl.ID, cl); err != nil {
 			return err
 		}
 	}
@@ -182,6 +194,11 @@ func New(serverRemoteAddr string) http.Handler {
 		}
 	})
 	r.Path("/").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		clients, err := stor.ListClients()
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
 		users, err := stor.ListUsers()
 		if err != nil {
 			w.Write([]byte(err.Error()))
@@ -218,6 +235,7 @@ func New(serverRemoteAddr string) http.Handler {
 		}
 
 		v := map[string]interface{}{
+			"Clients":          clients,
 			"Users":            users,
 			"ServiceProviders": spds,
 			"Version":          version,
