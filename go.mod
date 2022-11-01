@@ -8,7 +8,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/mattermost/xml-roundtrip-validator v0.1.0
 	github.com/zenazn/goji v1.0.1
-	github.com/zitadel/oidc v1.9.0
+	github.com/zitadel/oidc v1.9.1
 	golang.org/x/text v0.3.7
 	gopkg.in/square/go-jose.v2 v2.6.0
 )
