@@ -9,7 +9,7 @@ require (
 	github.com/mattermost/xml-roundtrip-validator v0.1.0
 	github.com/zenazn/goji v1.0.1
 	github.com/zitadel/oidc v1.9.0
-	golang.org/x/text v0.3.7
+	golang.org/x/text v0.4.0
 	gopkg.in/square/go-jose.v2 v2.6.0
 )
 
@@ -27,7 +27,7 @@ require (
 	golang.org/x/crypto v0.0.0-20220128200615-198e4374d7ed // indirect
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43 // indirect
-	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
+	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
 	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 )
