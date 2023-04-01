@@ -3,7 +3,7 @@ module github.com/seriousben/dev-identity-provider
 go 1.18
 
 require (
-	github.com/crewjam/saml v0.4.12
+	github.com/crewjam/saml v0.4.13
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/mattermost/xml-roundtrip-validator v0.1.0
