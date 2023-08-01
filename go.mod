@@ -9,7 +9,7 @@ require (
 	github.com/mattermost/xml-roundtrip-validator v0.1.0
 	github.com/zenazn/goji v1.0.1
 	github.com/zitadel/oidc v1.13.4
-	golang.org/x/text v0.10.0
+	golang.org/x/text v0.11.0
 	gopkg.in/square/go-jose.v2 v2.6.0
 )
 
